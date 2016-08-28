@@ -9,15 +9,10 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-
-
-
-
-
-
 public class Main {
 
     static HashMap<String, User> users = new HashMap<>();
+    static  ArrayList<Game> games = new ArrayList<>();
 
 
     public static void main(String[] args) throws SQLException {
@@ -26,7 +21,6 @@ public class Main {
         Connection conn = DriverManager.getConnection("jdbc:h2:./main");
         Statement stmt = conn.createStatement();
         stmt.execute("CREATE TABLE IF NOT EXISTS games (id IDENTITY, gameName VARCHAR, genre VARCHAR, platform VARCHAR, release_year INT)");
-
 
         Spark.init();
 
@@ -40,7 +34,6 @@ public class Main {
                         return new ModelAndView(m, "login.html");
                     }
                     else {
-
                         ArrayList<Game> gameArrayList = selectGames(conn);
                         m.put("games", gameArrayList);
                         return new ModelAndView(m, "home.html");
@@ -48,7 +41,6 @@ public class Main {
                 }),
                 new MustacheTemplateEngine()
         );
-
         Spark.post(
                 "/create-user",
                 ((request, response) -> {
@@ -66,23 +58,24 @@ public class Main {
                     return "";
                 })
         );
-
         Spark.post(
                 "/create-game",
                 ((request, response) -> {
                     User user = getUserFromSession(request.session());
+                    if (user == null) {
+                        Spark.halt(403);
+                    }
 
                     String gameName = request.queryParams("gameName");
                     String gameGenre = request.queryParams("gameGenre");
                     String gamePlatform = request.queryParams("gamePlatform");
                     Integer gameYear = Integer.valueOf(request.queryParams("gameYear"));
-
                     Game game = new Game(gameName, gameGenre, gamePlatform, gameYear);
+
                     insertGame(conn, gameName, gameGenre, gamePlatform, gameYear);
 
-
                     if (user != null) {
-                        user.games.add(game);
+                        games.add(game);
                     }
 
                     response.redirect("/");
@@ -127,8 +120,8 @@ public class Main {
         );
     }
 
-    static void updateGame(Connection conn, Integer id, String name, String genre, String platform, Integer releaseYear) throws SQLException {
-
+    static void updateGame(Connection conn, Integer id, String name, String genre,
+                           String platform, Integer releaseYear) throws SQLException {
         Statement stmt = conn.createStatement();
         stmt.execute("UPDATE GAMES SET GAMENAME = '" + name + "' WHERE ID = " + id);
         stmt.execute("UPDATE GAMES SET GENRE = '" + genre + "' WHERE ID = " + id);
@@ -146,34 +139,17 @@ public class Main {
         Statement stmt = conn.createStatement();
         ResultSet results = stmt.executeQuery("SELECT * FROM GAMES");
         while(results.next()){
-            Integer id = results.getInt("Id");
-            String name = results.getString("GameName");
-            String genre = results.getString("Genre");
-            String platform = results.getString("Platform");
-            Integer releaseYear = results.getInt("ReleaseYear");
-//Cant get this line working!!!!!!
+            Integer id = results.getInt("ID");
+            String name = results.getString("GAMENAME");
+            String genre = results.getString("GENRE");
+            String platform = results.getString("PLATFORM");
+            Integer releaseYear = results.getInt("RELEASE_YEAR");
 
             games.add(new Game(id, name, genre, platform, releaseYear));
-//            selectGames().add(new Game((id, name, genre, platform, releaseYear));
-            stmt.execute("INSERT INTO games VALUES (NULL, name, genre, platform, releaseYear)");
         }
 
         return games;
     }
-//    public static ArrayList<ToDoItem> selectToDos(Connection conn) throws SQLException {
-//        ArrayList<ToDoItem> items = new ArrayList<>();
-//        Statement stmt = conn.createStatement();
-//        ResultSet results = stmt.executeQuery("SELECT * FROM todos");
-//        while (results.next()) {
-//            int id = results.getInt("id");
-//            String text = results.getString("text");
-//            boolean isDone = results.getBoolean("is_done");
-//            items.add(new ToDoItem(id, text, isDone));
-//        }
-//        return items;
-//    }
-//
-
 
     static void insertGame(Connection conn, String name, String genre, String platform, Integer releaseYear) throws SQLException {
         PreparedStatement stmt = conn.prepareStatement("INSERT INTO games VALUES (NULL, ?, ?, ?, ?)");
