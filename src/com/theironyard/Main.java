@@ -9,11 +9,11 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+
+
 public class Main {
-
+   // static ArrayList<Game> games = new ArrayList<>();
     static HashMap<String, User> users = new HashMap<>();
-    static  ArrayList<Game> games = new ArrayList<>();
-
 
     public static void main(String[] args) throws SQLException {
 
@@ -23,7 +23,6 @@ public class Main {
         stmt.execute("CREATE TABLE IF NOT EXISTS games (id IDENTITY, gameName VARCHAR, genre VARCHAR, platform VARCHAR, release_year INT)");
 
         Spark.init();
-
         Spark.get(
                 "/",
                 ((request, response) -> {
@@ -36,7 +35,7 @@ public class Main {
                     else {
                         ArrayList<Game> gameArrayList = selectGames(conn);
                         m.put("games", gameArrayList);
-                        return new ModelAndView(m, "home.html");
+                        return new ModelAndView(m, "index.html");
                     }
                 }),
                 new MustacheTemplateEngine()
@@ -63,6 +62,7 @@ public class Main {
                 ((request, response) -> {
                     User user = getUserFromSession(request.session());
                     if (user == null) {
+
                         Spark.halt(403);
                     }
 
@@ -70,12 +70,11 @@ public class Main {
                     String gameGenre = request.queryParams("gameGenre");
                     String gamePlatform = request.queryParams("gamePlatform");
                     Integer gameYear = Integer.valueOf(request.queryParams("gameYear"));
-                    Game game = new Game(gameName, gameGenre, gamePlatform, gameYear);
-
                     insertGame(conn, gameName, gameGenre, gamePlatform, gameYear);
 
                     if (user != null) {
-                        games.add(game);
+                        selectGames(conn);
+//                        user.games.add(game);
                     }
 
                     response.redirect("/");
@@ -123,9 +122,9 @@ public class Main {
     static void updateGame(Connection conn, Integer id, String name, String genre,
                            String platform, Integer releaseYear) throws SQLException {
         Statement stmt = conn.createStatement();
-        stmt.execute("UPDATE GAMES SET GAMENAME = '" + name + "' WHERE ID = " + id);
-        stmt.execute("UPDATE GAMES SET GENRE = '" + genre + "' WHERE ID = " + id);
-        stmt.execute("UPDATE GAMES SET PLATFORM = '" + platform + "' WHERE ID = " + id);
+        stmt.execute("UPDATE GAMES SET GAMENAME = " + name + " WHERE ID = " + id);
+        stmt.execute("UPDATE GAMES SET GENRE = " + genre + " WHERE ID = " + id);
+        stmt.execute("UPDATE GAMES SET PLATFORM = " + platform + " WHERE ID = " + id);
         stmt.execute("UPDATE GAMES SET RELEASE_YEAR = " + releaseYear + " WHERE ID = " + id);
     }
 
